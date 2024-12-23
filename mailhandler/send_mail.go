@@ -2,13 +2,14 @@ package mailhandler
 
 import (
 	"net/smtp"
+	"os"
 )
 
 func SendMail(to, body, subject string) error {
 	var err error
 
 	from := "jesseomolo@gmail.com"
-	password := "your_gmail_password"
+	password := os.Getenv("EMAIL_PASSWORD")
 	smtpHost := "smtp.gmail.com"
 	smtpHostPort := "587"
 

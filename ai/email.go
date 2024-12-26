@@ -1,33 +1,51 @@
 package ai
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"log"
 	"os"
 
+	"github.com/google/generative-ai-go/genai"
 	"github.com/joho/godotenv"
-	"github.com/sashabaranov/go-openai"
+	"google.golang.org/api/option"
 )
 
-func GenerateEmail(context string) string {
-	err := godotenv.Load("FUNGUO")
+func GenerateEmail(emailContext string) (string, error) {
+	// Load the.env file to get the API key
+	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Failed to load .env; %v", err)
 	}
 
-	AI_KEY := os.Getenv("FUNGUO_API_KEY") // Get API key
-	client := openai.NewClient(AI_KEY)    // Create new OpenAI client
-
-	// Generate a chat completion response based on the provided context and system message
-	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
-		Model: openai.GPT4,
-		Messages: []openai.ChatCompletionMessage{
-			{Role: "system", Content: "You're a sales representive for a SAAS business. Generate an engaging email, informing the client of a lucrative festive season 50% OFF offer."},
-			{Role: "user", Content: fmt.Sprintf("Generate a personalized email template based on the context: %s", context)},
-		},
-	})
-	if err != nil {
-		log.Fatalf("Error generating chat completion: %v", err)
+	// Get the API key from environment variable and check if it's set
+	AI_KEY := os.Getenv("FUNGUO")
+	if AI_KEY == "" {
+		log.Fatal("FUNGUO environment variable not set")
 	}
-	return resp.Choices[0].Message.Content
+
+	// Create the Gemini client
+	client, err := genai.NewClient(context.Background(), option.WithAPIKey(AI_KEY))
+	if err != nil {
+		log.Fatalf("Failed to create Gemini client: %v", err)
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-pro")
+
+	// Call the Gemini API
+	resp, err := model.GenerateContent(context.Background(), genai.Text(emailContext))
+	if err != nil {
+		return "", err
+	}
+
+	// Check if the response contains any content, return approproately
+	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+		if textContent, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
+			return string(textContent), nil
+		}
+	}
+	// Return error
+	err = errors.New("failed to generate email content")
+	return "", err
 }

@@ -5,13 +5,20 @@ import (
 	"log"
 	"text/template"
 
+	"email-ai-agent/ai"
 	"email-ai-agent/mailhandler"
 	"email-ai-agent/models"
 )
 
 func main() {
+
+	context := `The recipient is a premium client of our company. They have recently completed a purchase, and we want to thank them and share some upcoming offers.`
+	emailTemplate, err := ai.GenerateEmail(context)
+	if err != nil {
+		log.Fatalf("Failed to generate email: %v", err)
+	}
 	// Parse the email template and check for errors
-	tmpl, err := template.New("email").Parse(models.EmailTemplate)
+	tmpl, err := template.New("email").Parse(emailTemplate)
 	if err != nil {
 		log.Fatalf("Failed to parse template: %v", err)
 	}
